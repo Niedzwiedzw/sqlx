@@ -154,11 +154,11 @@ fn expand_derive_from_row_struct(
                         },
                         Flatten::Nullable => {
                             predicates.push(parse_quote!(#ty: ::sqlx::OptionOf));
-                            predicates.push(parse_quote!(<#ty as ::sqlx::OptionOf>::Inner: ::sqlx::FromRow<#lifetime, R>));
+                            predicates.push(parse_quote!(#try_from: ::sqlx::FromRow<#lifetime, R>));
                             parse_quote!(
                                     match <#try_from as ::sqlx::FromRow<#lifetime, R>>::from_row(__row) {
                                         ::std::result::Result::Ok(v) => {
-                                            <#ty as ::std::convert::TryFrom::<#try_from>>::try_from(v)
+                                            <<#ty as  ::sqlx::OptionOf>::Inner as ::std::convert::TryFrom::<#try_from>>::try_from(v)
                                                 .map(::std::option::Option::Some)
                                                 .map_err(|e| {
                                                     #[allow(unreachable_code)]
