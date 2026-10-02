@@ -158,7 +158,7 @@ fn expand_derive_from_row_struct(
                             parse_quote!(
                                     match <#try_from as ::sqlx::FromRow<#lifetime, R>>::from_row(__row) {
                                         ::std::result::Result::Ok(v) => {
-                                            <<#ty as  ::sqlx::OptionOf>::Inner as ::std::convert::TryFrom::<#try_from>>::try_from(v)
+                                            <<#ty as ::sqlx::OptionOf>::Inner as ::std::convert::TryFrom::<#try_from>>::try_from(v)
                                                 .map(::std::option::Option::Some)
                                                 .map_err(|e| {
                                                     #[allow(unreachable_code)]
