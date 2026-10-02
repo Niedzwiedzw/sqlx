@@ -38,22 +38,6 @@ pub fn expand_derive_from_row(input: &DeriveInput) -> syn::Result<TokenStream> {
     }
 }
 
-fn unpack_option(ty: &syn::Type) -> Option<&syn::Type> {
-    match ty {
-        syn::Type::Path(type_path) => type_path.path.segments.last(),
-        _ => None,
-    }
-    .filter(|s| s.ident == "Option")
-    .and_then(|a| match &a.arguments {
-        syn::PathArguments::AngleBracketed(a) => a.args.first(),
-        _ => None,
-    })
-    .and_then(|a| match a {
-        syn::GenericArgument::Type(inner) => Some(inner),
-        _ => None,
-    })
-}
-
 fn expand_derive_from_row_struct(
     input: &DeriveInput,
     fields: &Punctuated<Field, Comma>,
@@ -132,10 +116,10 @@ fn expand_derive_from_row_struct(
                             parse_quote!(<#ty as ::sqlx::FromRow<#lifetime, R>>::from_row(__row))
                         },
                         Flatten::Nullable => {
-                            let ty = unpack_option(ty).unwrap_or_else(|| panic!("nullable expects Option<T>"));
-                            predicates.push(parse_quote!(#ty: ::sqlx::FromRow<#lifetime, R>));
+                            predicates.push(parse_quote!(#ty: ::sqlx::OptionOf));
+                            predicates.push(parse_quote!(<#ty as ::sqlx::OptionOf>::Inner: ::sqlx::FromRow<#lifetime, R>));
                             parse_quote! {
-                                match <#ty as ::sqlx::FromRow<#lifetime, R>>::from_row(__row) {
+                                match <<#ty as ::sqlx::OptionOf>::Inner as ::sqlx::FromRow<#lifetime, R>>::from_row(__row) {
                                     ::std::result::Result::Ok(v) => ::std::result::Result::Ok(::std::option::Option::Some(v)),
                                     ::std::result::Result::Err(::sqlx::Error::ColumnDecode { source, .. })
                                         if source.is::<::sqlx::error::UnexpectedNullError>() =>
@@ -169,8 +153,8 @@ fn expand_derive_from_row_struct(
                             )
                         },
                         Flatten::Nullable => {
-                            let ty = unpack_option(ty).unwrap_or_else(|| panic!("nullable expects Option<T>"));
-                            predicates.push(parse_quote!(#try_from: ::sqlx::FromRow<#lifetime, R>));
+                            predicates.push(parse_quote!(#ty: ::sqlx::OptionOf));
+                            predicates.push(parse_quote!(<#ty as ::sqlx::OptionOf>::Inner: ::sqlx::FromRow<#lifetime, R>));
                             parse_quote!(
                                     match <#try_from as ::sqlx::FromRow<#lifetime, R>>::from_row(__row) {
                                         ::std::result::Result::Ok(v) => {

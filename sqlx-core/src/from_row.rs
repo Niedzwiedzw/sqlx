@@ -522,3 +522,11 @@ impl_from_row_for_tuple!(
     (14) -> T15;
     (15) -> T16;
 );
+
+pub trait OptionOf {
+    type Inner;
+}
+
+impl<T> OptionOf for Option<T> {
+    type Inner = T;
+}
